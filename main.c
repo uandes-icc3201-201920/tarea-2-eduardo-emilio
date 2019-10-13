@@ -93,7 +93,6 @@ void page_fault_handler( struct page_table *pt, int page )
 	}
 
 	else{
-		printf("\nbl ");
 		int pos;
 
 		if(!strcmp(algoritmo,"FIFO"))
@@ -103,8 +102,12 @@ void page_fault_handler( struct page_table *pt, int page )
 		}
 		else if(!strcmp(algoritmo,"RAND"))
 		{
-			pos = lrand48() % nframes-1;
-			printf("%d ",pos);
+			int cont = 0;
+			do
+			{
+				pos = lrand48() % nframes;
+			if(++cont%100==0) printf("que perra\n");
+			}while( pos <= 0 || pos >= nframes );
 		}
 		else
 		{
