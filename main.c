@@ -15,10 +15,40 @@ how to use the page table and disk interfaces.
 #include <string.h>
 #include <errno.h>
 
+int *ft = NULL; //frame table
+struct disk *disk;
+char *physmem;
+
+
 void page_fault_handler( struct page_table *pt, int page )
 {
-	printf("page fault on page #%d\n",page);
-	exit(1);
+	int nframes = *(ft);
+
+	int hay_espacio = 0;
+	int donde;
+	for(int i = 1 ; i<nframes-1 ; ++i){
+		if(*(ft + i)==-1){
+			hay_espacio = 1;
+			donde = i;
+		}
+	} // se revisa si hay espacio disponible y donde
+	if(hay_espacio){
+		printf("\nwat da fuk %d",page);
+		page_table_set_entry(pt,page,donde-1,PROT_READ|PROT_WRITE); //lol
+		disk_read(disk,page,&physmem[donde-1]);
+		*(ft+donde) = page;
+	}
+
+	else{
+		printf("\nmuerte y dolor");
+		printf("page fault on page #%d\n",page);
+		exit(1);
+	}
+
+	
+	//page_table_set_entry(pt,page,page,PROT_READ|PROT_WRITE);
+	//printf("page fault on page #%d\n",page);
+	//exit(1);
 }
 
 int main( int argc, char *argv[] )
@@ -32,7 +62,17 @@ int main( int argc, char *argv[] )
 	int nframes = atoi(argv[2]);
 	const char *program = argv[4];
 
-	struct disk *disk = disk_open("myvirtualdisk",npages);
+
+	// frame table
+	ft = realloc( ft, (nframes+1)*sizeof(int) );
+	*(ft) = nframes; // en la primera pocision se guarda la cantidad de marcos
+	for(int i = 1 ; i<nframes+1 ; ++i)
+	{
+		*(ft + i) = -1;
+	}
+
+
+	disk = disk_open("myvirtualdisk",npages);
 	if(!disk) {
 		fprintf(stderr,"couldn't create virtual disk: %s\n",strerror(errno));
 		return 1;
@@ -47,7 +87,8 @@ int main( int argc, char *argv[] )
 
 	char *virtmem = page_table_get_virtmem(pt);
 
-	char *physmem = page_table_get_physmem(pt);
+	
+	physmem = page_table_get_physmem(pt);
 
 	if(!strcmp(program,"pattern1")) {
 		access_pattern1(virtmem,npages*PAGE_SIZE);
