@@ -112,13 +112,15 @@ void page_fault_handler( struct page_table *pt, int page )
 		{
 			pos = lrand48() % (nframes-1) + 1; 
 			// se elige una posicion aleatoriamente
-			// esta tecnicamente mal pq va de 1 hasta nframe-1,
+			// esta tecnicamente mal pq va de 1 hasta nframe-1, (debiera ser desde el 0 hasta el nframe-1)
+
 			// pero no logramos descubrir pq solo en el caso RAND, si pos==0
 			// genera error y page_table_set_entry lo reconoce como fuera del dominio de los frames,
 			// resultando en que el codigo base envie el mensaje de error correspondiente y se caiga el programa,
-			// sin embargo esto no pasa si pos==0 viene de FIFO.
 			// es por esto que fue dejado de esta forma.
-			// esto provoca que funcione con un marco menos el algoritmo RAND, lo cual fue tomado en cuenta en la comparacion experimeental y compensado al darle un frame mas.
+
+			// sin embargo esto no pasa si pos==0 viene de FIFO.
+			// esto provoca que funcione con un marco menos el algoritmo RAND, lo cual fue tomado en cuenta en la comparacion experimental y compensado al darle un frame mas.
 		}
 		else
 		{
@@ -127,13 +129,13 @@ void page_fault_handler( struct page_table *pt, int page )
 			exit(1);
 		}
 
-		disk_write(disk,ft[pos],&physmem[pos]);
-		page_table_set_entry(pt,ft[pos],pos,0);
+		disk_write(disk,ft[pos],&physmem[pos]); // se escribe en disco el valor de la pagina en caso de que haya sido modificada.
+		page_table_set_entry(pt,ft[pos],pos,0); // se actualiza la entrada para indicar que ya no esta cargada en memoria
 
-		disk_read(disk,page,&physmem[pos]);
-		page_table_set_entry(pt,page,pos,PROT_READ|PROT_WRITE);
+		disk_read(disk,page,&physmem[pos]); // se lee del disco y se deja en memoria la pagina que causo la falta
+		page_table_set_entry(pt,page,pos,PROT_READ|PROT_WRITE); // se actualiza la entrada de la pagina en la tabla.
 
-		ft[pos] = page;
+		ft[pos] = page; // se actualiza la estructura en que se registran los estados de los frames.
 
 
 		// printf("\nmuerte y dolor");
