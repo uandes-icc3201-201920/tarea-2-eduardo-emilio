@@ -26,18 +26,28 @@ static int compare_bytes( const void *pa, const void *pb )
 void access_pattern1( char *data, int length )
 {
 	int a = 1;
-	for (int i = 0; i < length; i++) {
+	for (int i = length-1; i >= 0; i--) {
 	data[i] = 0;
 	}
 	for (int i = 0; i < length; i++) {
 	a = data[i];
 	}
 
-	// TODO: Implementar
+	//TODO: Implementar
 }
 
 void access_pattern2( char *data, int length )
 {
+	int a;
+	for(int i = 0 ; i<1000 ; i++){
+		a = lrand48()%length;
+		if(i%2==0){
+			data[a] = i; 
+		}
+		else{
+			data[a-1] = data[a];
+		}
+	}
 	// TODO: Implementar
 }
 
