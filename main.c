@@ -26,9 +26,9 @@ int itemCount = 0; // estas tres variables son para implementar un queue, por ah
 int *ft = NULL; //frame table en la pocision i se guarda el numero de pagina del elemento que esta en el marco i.
 int *queue = NULL; // el elemento i representa un frame 
 struct disk *disk;
-int nframes;
 char *physmem;
 char *algoritmo;// argv[3] en un futuro muy muy cercano
+int nframes;
 
 
 // las siguientes 6 funciones son para implementar un queue circular con un array
@@ -79,11 +79,9 @@ int removeData(int *intArray)
 
 void page_fault_handler( struct page_table *pt, int page )
 {
-	int nframes = *(ft);
-
-	int hay_espacio = 0;
+	int hay_espacio = 0; // en cualquier otro lenguaje esto seria un booleano
 	int donde;
-	for(int i = 1 ; i<nframes+1 ; ++i){
+	for(int i = 0 ; i<nframes ; ++i){
 		if(*(ft + i)==-1){
 			hay_espacio = 1;
 			donde = i;
@@ -93,10 +91,10 @@ void page_fault_handler( struct page_table *pt, int page )
 
 	// si hay espacio disponible
 	if(hay_espacio){
-		page_table_set_entry(pt,page,donde-1,PROT_READ|PROT_WRITE); 
-		disk_read(disk,page,&physmem[donde-1]);
+		page_table_set_entry(pt,page,donde,PROT_READ|PROT_WRITE); 
+		disk_read(disk,page,&physmem[donde*PAGE_SIZE]);
 		*(ft+donde) = page;
-		insert(queue,donde-1);
+		insert(queue,donde);
 	}
 	// si hay que hacer espacio
 	else{
@@ -110,17 +108,8 @@ void page_fault_handler( struct page_table *pt, int page )
 		}
 		else if(!strcmp(algoritmo,"RAND"))
 		{
-			pos = lrand48() % (nframes-1) + 1; 
+			pos = lrand48() % nframes; 
 			// se elige una posicion aleatoriamente
-			// esta tecnicamente mal pq va de 1 hasta nframe-1, (debiera ser desde el 0 hasta el nframe-1)
-
-			// pero no logramos descubrir pq solo en el caso RAND, si pos==0
-			// genera error y page_table_set_entry lo reconoce como fuera del dominio de los frames,
-			// resultando en que el codigo base envie el mensaje de error correspondiente y se caiga el programa,
-			// es por esto que fue dejado de esta forma.
-
-			// sin embargo esto no pasa si pos==0 viene de FIFO.
-			// esto provoca que funcione con un marco menos el algoritmo RAND, lo cual fue tomado en cuenta en la comparacion experimental y compensado al darle un frame mas.
 		}
 		else
 		{
@@ -129,10 +118,10 @@ void page_fault_handler( struct page_table *pt, int page )
 			exit(1);
 		}
 
-		disk_write(disk,ft[pos],&physmem[pos]); // se escribe en disco el valor de la pagina en caso de que haya sido modificada.
+		disk_write(disk,ft[pos],&physmem[pos*PAGE_SIZE]); // se escribe en disco el valor de la pagina en caso de que haya sido modificada.
 		page_table_set_entry(pt,ft[pos],pos,0); // se actualiza la entrada para indicar que ya no esta cargada en memoria
 
-		disk_read(disk,page,&physmem[pos]); // se lee del disco y se deja en memoria la pagina que causo la falta
+		disk_read(disk,page,&physmem[pos*PAGE_SIZE]); // se lee del disco y se deja en memoria la pagina que causo la falta
 		page_table_set_entry(pt,page,pos,PROT_READ|PROT_WRITE); // se actualiza la entrada de la pagina en la tabla.
 
 		ft[pos] = page; // se actualiza la estructura en que se registran los estados de los frames.
@@ -142,9 +131,6 @@ void page_fault_handler( struct page_table *pt, int page )
 		// printf("page fault on page #%d\n",page);
 		// exit(1);
 	}
-
-	
-
 }
 
 int main( int argc, char *argv[] )
@@ -165,10 +151,9 @@ int main( int argc, char *argv[] )
 	// adicionalmente tenemos un queue que solo se utiliza en el caso FIFO
 	// sirve para indicar al frame/page victima.
     queue = malloc( nframes*sizeof(int) );
-	ft = realloc( ft, (nframes+1)*sizeof(int) );
+	ft = realloc( ft, (nframes)*sizeof(int) );
 
-	*(ft) = nframes; // en la primera pocision se guarda la cantidad de marcos
-	for(int i = 1 ; i<nframes+1 ; ++i)
+	for(int i = 0 ; i<nframes ; ++i)
 	{
 		*(ft + i) = -1;
 	}
